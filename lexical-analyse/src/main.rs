@@ -173,8 +173,18 @@ impl<'a> Lexer<'a> {
         let mut is_escaped = false;
 
         while let Some(ch) = self.current_char {
+            if ch == '\n' {
+                panic!("Unterminated string literal");
+            }
+
             if is_escaped {
-                literal.push(ch);
+                match ch {
+                    'n' => literal.push('\n'),
+                    't' => literal.push('\t'),
+                    '\\' => literal.push('\\'),
+                    '"' => literal.push('"'),
+                    _ => literal.push(ch),
+                }
                 is_escaped = false;
             } else if ch == '\\' {
                 is_escaped = true;
@@ -193,11 +203,15 @@ impl<'a> Lexer<'a> {
     fn consume_operator(&mut self) -> Token {
         let mut operator = String::new();
         while let Some(ch) = self.current_char {
-            if ch.is_ascii_whitespace() || ch.is_alphanumeric() {
+            if ch.is_ascii_whitespace() || ch.is_alphanumeric() || ch == '"' {
                 break;
             }
             operator.push(ch);
             self.advance();
+        }
+        if operator == "\"" {
+            self.advance();
+            return self.consume_string_literal();
         }
         Token::Operator(operator)
     }
