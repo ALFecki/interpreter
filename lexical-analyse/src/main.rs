@@ -1,6 +1,7 @@
 use std::str::Chars;
+use std::collections::HashMap;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 enum Token {
     Keyword(String),
     Identifier(String),
@@ -16,6 +17,7 @@ enum Token {
 struct Lexer<'a> {
     input: Chars<'a>,
     current_char: Option<char>,
+    variables: HashMap<String, Token>,
 }
 
 impl<'a> Lexer<'a> {
@@ -23,6 +25,7 @@ impl<'a> Lexer<'a> {
         let mut lexer = Lexer {
             input: input.chars(),
             current_char: None,
+            variables: HashMap::new(),
         };
         lexer.advance();
         lexer
@@ -38,7 +41,7 @@ impl<'a> Lexer<'a> {
         let mut current_indentation = 0;
 
         loop {
-                match self.current_char {
+            match self.current_char {
                 Some(' ') => {
                     self.advance();
                 }
@@ -65,7 +68,7 @@ impl<'a> Lexer<'a> {
                     if ch.is_ascii_digit() || ch == '-' {
                         tokens.push(self.consume_number());
                     } else if ch.is_alphabetic() {
-                        tokens.push(self.consume_identifier());
+                        tokens.push(self.consume_identifier().clone());
                     } else {
                         match ch {
                             '#' => {
@@ -153,10 +156,22 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        match identifier.as_str() {
-            "if" | "else" | "for" | "while" | "def" | "class" => Token::Keyword(identifier),
-            _ => Token::Identifier(identifier),
+        let token = match identifier.as_str() {
+            "if" | "else" | "for" | "while" | "def" | "class" => Token::Keyword(identifier.clone()),
+            _ => {
+                if let Some(token) = self.variables.get(&identifier) {
+                    token.clone()
+                } else {
+                    Token::Identifier(identifier.clone())
+                }
+            }
+        };
+
+        if let Token::Identifier(_) = &token {
+            self.variables.entry(identifier).or_insert_with(|| token.to_owned());
         }
+
+        token
     }
 
     fn consume_comment(&mut self) {
@@ -222,6 +237,9 @@ fn main() {
         x = -5
         if x < 10:
             print("Hello, world!")
+        y = 3.14
+        if y > 2.0:
+            print("Pi is greater than 2!")
     "#;
 
     let mut lexer = Lexer::new(input);
