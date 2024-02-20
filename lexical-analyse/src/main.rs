@@ -1,18 +1,26 @@
 use std::fmt::Debug;
 use std::str::Chars;
+use crate::Token::Variable;
 
 #[derive(Debug, PartialEq, Clone)]
 enum Token {
     Keyword(String),
     Identifier(String),
+    Variable((Type, String)),
     Operator(String),
-    Integer(i32),
-    Float(f64),
-    StringLiteral(String),
+    Constant(Type),
     Indent,
     Dedent,
     Newline,
     LexicalError(String),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+enum Type {
+    Integer(i32),
+    Float(f64),
+    String(String),
+    Char(char),
 }
 
 struct Lexer<'a> {
@@ -97,8 +105,9 @@ impl<'a> Lexer<'a> {
             tokens.push((Token::Dedent, self.current_index));
             current_indentation = indentation_stack.pop().unwrap();
         }
-
-        Ok(self.verify_output(tokens))
+        let mut verified_tokens = self.verify_output(tokens);
+        self.add_data_types(verified_tokens.clone().len(), &mut verified_tokens, );
+        Ok(verified_tokens)
     }
 
     fn consume_number(&mut self) -> Token {
@@ -129,9 +138,9 @@ impl<'a> Lexer<'a> {
         if is_float {
             if let Ok(f) = num_str.parse::<f64>() {
                 if is_negative {
-                    Token::Float(-f)
+                    Token::Constant(Type::Float(-f))
                 } else {
-                    Token::Float(f)
+                    Token::Constant(Type::Float(f))
                 }
             } else {
                 panic!("Invalid float number: {}", num_str);
@@ -139,9 +148,9 @@ impl<'a> Lexer<'a> {
         } else {
             if let Ok(i) = num_str.parse::<i32>() {
                 if is_negative {
-                    Token::Integer(-i)
+                    Token::Constant(Type::Integer(-i))
                 } else {
-                    Token::Integer(i)
+                    Token::Constant(Type::Integer(i))
                 }
             } else {
                 panic!("Invalid integer: {}", num_str);
@@ -204,7 +213,7 @@ impl<'a> Lexer<'a> {
             self.advance();
         }
 
-        Token::StringLiteral(literal)
+        Token::Constant(Type::String(literal))
     }
 
     fn consume_operator(&mut self) -> Token {
@@ -247,7 +256,7 @@ impl<'a> Lexer<'a> {
                         // let (new_line, indent) = (new_tokens[new_tokens.len() - 1].clone(), new_tokens[new_tokens.len() - 2].clone());
                         let (new_line, column_number) = tokens[index - 1].clone();
                         if new_line != Token::Newline || *token != Token::Indent {
-                            new_tokens.push(Token::LexicalError(format!("Invalid intent {:?}:{:?}",line_number + 1, column_number)))
+                            new_tokens.push(Token::LexicalError(format!("Invalid intent {:?}:{:?}", line_number + 1, column_number)))
                         }
                     }
                 }
@@ -264,12 +273,32 @@ impl<'a> Lexer<'a> {
 
         return new_tokens;
     }
+
+    fn add_data_types(&self, size: usize, tokens: &mut [Token]) {
+        for i in 0..size {
+            match tokens[i].clone() {
+                Token::Identifier(name) => {
+                    if i < size - 3 && tokens[i + 1] == Token::Operator("=".to_string()) {
+                        match tokens[i + 2].clone() {
+                            Token::Constant(t) => {
+                                tokens[i] = Token::Variable((t, name))
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
 }
 
 fn main() {
     let input = r#"
         x = -5
         k = 10
+
+        e = 1e10
         if x < 10:
         print("Hello, world!")
     "#;
