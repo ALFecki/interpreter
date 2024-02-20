@@ -93,6 +93,8 @@ impl<'a> Lexer<'a> {
                         spaces_count += 1;
                     }
                     if spaces_count > current_indentation {
+                        println!("@@@@@@@@@@@@@@@@@@@@");
+                        println!("{:?}", spaces_count);
                         tokens.push((Token::Indent, self.current_index));
                         indentation_stack.push(current_indentation);
                         current_indentation = spaces_count;
@@ -269,6 +271,19 @@ impl<'a> Lexer<'a> {
             if index == 0 {
                 continue;
             }
+            match tokens[index - 1].clone() {
+                (Token::Operator(a), _) => {
+                    if a == ":" {
+                        let (indent, column_number) = tokens[index + 1].clone();
+                        let (next_intend, _) = tokens[index + 2].clone();
+                        if *token != Token::Newline || indent != Token::Indent || next_intend == Token::Indent {
+                            new_tokens.push(Token::LexicalError(format!("Invalid intent {:?}:{:?}", line_number, column_number)))
+                        }
+                    }
+                }
+                _ => {}
+            }
+
             match tokens[index + 1].clone() {
                 (Token::Operator(a), column_num) => {
                     if a != ":" && a != ")" && a != "]" {
@@ -278,12 +293,13 @@ impl<'a> Lexer<'a> {
                                 new_tokens.push(Token::LexicalError(format!("Invalid order {:?}:{:?}: {:?} cannot be before {:?}", line_number, column_num, *token, tokens[index + 1].0)));
                             }
                         }
-                    } else if a == ":" {
-                        let (new_line, column_number) = tokens[index - 1].clone();
-                        if new_line != Token::Newline || *token != Token::Indent {
-                            new_tokens.push(Token::LexicalError(format!("Invalid intent {:?}:{:?}", line_number + 1, column_number)))
-                        }
                     }
+                    // else if a == ":" {
+                    //     let (new_line, column_number) = tokens[index - 1].clone();
+                    //     if new_line != Token::Newline || *token != Token::Indent {
+                    //         new_tokens.push(Token::LexicalError(format!("Invalid intent {:?}:{:?}", line_number + 1, column_number)))
+                    //     }
+                    // }
                 }
                 (Token::Newline, _) => {
                     line_number += 1;
