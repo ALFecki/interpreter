@@ -1,5 +1,5 @@
+use std::fmt::Debug;
 use std::str::Chars;
-use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Clone)]
 enum Token {
@@ -12,12 +12,13 @@ enum Token {
     Indent,
     Dedent,
     Newline,
+    LexicalError(String),
 }
 
 struct Lexer<'a> {
     input: Chars<'a>,
     current_char: Option<char>,
-    variables: HashMap<String, Token>,
+    current_index: i32,
 }
 
 impl<'a> Lexer<'a> {
@@ -25,7 +26,7 @@ impl<'a> Lexer<'a> {
         let mut lexer = Lexer {
             input: input.chars(),
             current_char: None,
-            variables: HashMap::new(),
+            current_index: 0,
         };
         lexer.advance();
         lexer
@@ -33,42 +34,45 @@ impl<'a> Lexer<'a> {
 
     fn advance(&mut self) {
         self.current_char = self.input.next();
+        self.current_index += 1;
     }
 
-    fn tokenize(&mut self) -> Vec<Token> {
+    fn tokenize(&mut self) -> Result<Vec<Token>, String> {
         let mut tokens = Vec::new();
         let mut indentation_stack = Vec::new();
         let mut current_indentation = 0;
 
         loop {
+            let current_index = self.current_index;
             match self.current_char {
                 Some(' ') => {
                     self.advance();
                 }
                 Some('\n') => {
+                    self.current_index = 0;
                     self.advance();
-                    tokens.push(Token::Newline);
+                    tokens.push((Token::Newline, self.current_index));
                     let mut spaces_count = 0;
                     while let Some(' ') = self.current_char {
                         self.advance();
                         spaces_count += 1;
                     }
                     if spaces_count > current_indentation {
-                        tokens.push(Token::Indent);
+                        tokens.push((Token::Indent, self.current_index));
                         indentation_stack.push(current_indentation);
                         current_indentation = spaces_count;
                     } else {
                         while spaces_count < current_indentation {
-                            tokens.push(Token::Dedent);
+                            tokens.push((Token::Dedent, self.current_index));
                             current_indentation = indentation_stack.pop().unwrap();
                         }
                     }
                 }
                 Some(ch) => {
                     if ch.is_ascii_digit() || ch == '-' {
-                        tokens.push(self.consume_number());
+                        tokens.push((self.consume_number(), current_index));
                     } else if ch.is_alphabetic() {
-                        tokens.push(self.consume_identifier().clone());
+                        tokens.push((self.consume_identifier(), current_index));
                     } else {
                         match ch {
                             '#' => {
@@ -77,10 +81,10 @@ impl<'a> Lexer<'a> {
                             }
                             '"' => {
                                 self.advance();
-                                tokens.push(self.consume_string_literal());
+                                tokens.push((self.consume_string_literal(), current_index));
                             }
                             _ => {
-                                tokens.push(self.consume_operator());
+                                tokens.push((self.consume_operator(), current_index));
                             }
                         }
                     }
@@ -90,11 +94,11 @@ impl<'a> Lexer<'a> {
         }
 
         while current_indentation > 0 {
-            tokens.push(Token::Dedent);
+            tokens.push((Token::Dedent, self.current_index));
             current_indentation = indentation_stack.pop().unwrap();
         }
 
-        tokens
+        Ok(self.verify_output(tokens))
     }
 
     fn consume_number(&mut self) -> Token {
@@ -156,22 +160,10 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        let token = match identifier.as_str() {
-            "if" | "else" | "for" | "while" | "def" | "class" => Token::Keyword(identifier.clone()),
-            _ => {
-                if let Some(token) = self.variables.get(&identifier) {
-                    token.clone()
-                } else {
-                    Token::Identifier(identifier.clone())
-                }
-            }
-        };
-
-        if let Token::Identifier(_) = &token {
-            self.variables.entry(identifier).or_insert_with(|| token.to_owned());
+        match identifier.as_str() {
+            "if" | "else" | "for" | "while" | "def" | "class" | "and" | "or" | "is" | "not" => Token::Keyword(identifier),
+            _ => Token::Identifier(identifier),
         }
-
-        token
     }
 
     fn consume_comment(&mut self) {
@@ -230,22 +222,91 @@ impl<'a> Lexer<'a> {
         }
         Token::Operator(operator)
     }
+
+    fn verify_output(&mut self, tokens: Vec<(Token, i32)>) -> Vec<Token> {
+        let mut line_number = 1;
+        let mut new_tokens: Vec<Token> = Vec::new();
+        for (index, (token, _)) in tokens.iter().enumerate() {
+            // for ((token_prev, _), (token_next, ind_next)) in tokens.iter().zip(tokens.iter().skip(1)) {
+            if index == tokens.len() - 1 {
+                break;
+            }
+            if index == 0 {
+                continue;
+            }
+            match tokens[index + 1].clone() {
+                (Token::Operator(a), column_num) => {
+                    if a != ":" && a != ")" && a != "]" {
+                        match token {
+                            Token::Identifier(_) => {}
+                            _ => {
+                                new_tokens.push(Token::LexicalError(format!("Invalid order {:?}:{:?}: {:?} cannot be before {:?}", line_number, column_num, *token, tokens[index + 1].0)));
+                            }
+                        }
+                    } else if a == ":" {
+                        // let (new_line, indent) = (new_tokens[new_tokens.len() - 1].clone(), new_tokens[new_tokens.len() - 2].clone());
+                        let (new_line, column_number) = tokens[index - 1].clone();
+                        if new_line != Token::Newline || *token != Token::Indent {
+                            new_tokens.push(Token::LexicalError(format!("Invalid intent {:?}:{:?}",line_number, column_number)))
+                        }
+                    }
+                }
+                (Token::Newline, _) => {
+                    line_number += 1;
+                }
+                (Token::Indent, _) => {}
+                _ => {}
+            }
+            if *token != Token::Indent && *token != Token::Newline && *token != Token::Dedent {
+                new_tokens.push(token.clone())
+            }
+            //     match token_next {
+            //         Token::Operator(a) => {
+            //             if a != ":" && a != ")" && a != "]" {
+            //                 match *token_prev {
+            //                     Token::Identifier(_) => {}
+            //                     _ => {
+            //                         new_tokens.push(Token::LexicalError(format!("Invalid order {:?}:{:?}: {:?} cannot be before {:?}", line_number, ind_next, *token_prev, *token_next)));
+            //                     }
+            //                 }
+            //             } else if a == ":" {
+            //                 let (new_line   , indent) = (new_tokens[new_tokens.len() - 1].clone(), new_tokens[new_tokens.len() - 2].clone());
+            //                 if new_line != Token::Newline || indent != Token::Indent {
+            //                     new_tokens.push(Token::LexicalError(format!("Invalid intent")))
+            //                 }
+            //             }
+            //         }
+            //         Token::Newline => {
+            //             line_number += 1;
+            //         }
+            //         Token::Indent => {}
+            //         _ => {}
+            //     }
+            //     new_tokens.push(token_prev.clone())
+        }
+
+        return new_tokens;
+    }
 }
 
 fn main() {
     let input = r#"
         x = -5
+        = 10
         if x < 10:
-            print("Hello, world!")
-        y = 3.14
-        if y > 2.0:
-            print("Pi is greater than 2!")
+        print("Hello, world!")
     "#;
 
     let mut lexer = Lexer::new(input);
     let tokens = lexer.tokenize();
-
-    for token in tokens {
-        println!("{:?}", token);
+    match tokens {
+        Ok(tokens) => {
+            for token in tokens {
+                println!("{:?}", token);
+            }
+        }
+        Err(err) => {
+            println!("{}", err);
+        }
     }
 }
