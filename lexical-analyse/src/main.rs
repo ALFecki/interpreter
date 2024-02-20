@@ -1,6 +1,7 @@
+use std::fmt::Debug;
 use std::str::Chars;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 enum Token {
     Keyword(String),
     Identifier(String),
@@ -11,11 +12,13 @@ enum Token {
     Indent,
     Dedent,
     Newline,
+    LexicalError(String)
 }
 
 struct Lexer<'a> {
     input: Chars<'a>,
     current_char: Option<char>,
+    current_index: i32,
 }
 
 impl<'a> Lexer<'a> {
@@ -23,6 +26,7 @@ impl<'a> Lexer<'a> {
         let mut lexer = Lexer {
             input: input.chars(),
             current_char: None,
+            current_index: 0,
         };
         lexer.advance();
         lexer
@@ -30,42 +34,45 @@ impl<'a> Lexer<'a> {
 
     fn advance(&mut self) {
         self.current_char = self.input.next();
+        self.current_index += 1;
     }
 
-    fn tokenize(&mut self) -> Vec<Token> {
+    fn tokenize(&mut self) -> Result<Vec<Token>, String> {
         let mut tokens = Vec::new();
         let mut indentation_stack = Vec::new();
         let mut current_indentation = 0;
 
         loop {
-                match self.current_char {
+            let current_index = self.current_index;
+            match self.current_char {
                 Some(' ') => {
                     self.advance();
                 }
                 Some('\n') => {
                     self.advance();
-                    tokens.push(Token::Newline);
+                    tokens.push((Token::Newline, self.current_index));
                     let mut spaces_count = 0;
                     while let Some(' ') = self.current_char {
                         self.advance();
                         spaces_count += 1;
                     }
                     if spaces_count > current_indentation {
-                        tokens.push(Token::Indent);
+                        tokens.push((Token::Indent, self.current_index));
                         indentation_stack.push(current_indentation);
                         current_indentation = spaces_count;
                     } else {
                         while spaces_count < current_indentation {
-                            tokens.push(Token::Dedent);
+                            tokens.push((Token::Dedent, self.current_index));
                             current_indentation = indentation_stack.pop().unwrap();
                         }
                     }
                 }
                 Some(ch) => {
                     if ch.is_ascii_digit() || ch == '-' {
-                        tokens.push(self.consume_number());
+
+                        tokens.push((self.consume_number(), current_index));
                     } else if ch.is_alphabetic() {
-                        tokens.push(self.consume_identifier());
+                        tokens.push((self.consume_identifier(), current_index));
                     } else {
                         match ch {
                             '#' => {
@@ -74,10 +81,10 @@ impl<'a> Lexer<'a> {
                             }
                             '"' => {
                                 self.advance();
-                                tokens.push(self.consume_string_literal());
+                                tokens.push((self.consume_string_literal(), current_index));
                             }
                             _ => {
-                                tokens.push(self.consume_operator());
+                                tokens.push((self.consume_operator(), current_index));
                             }
                         }
                     }
@@ -87,11 +94,11 @@ impl<'a> Lexer<'a> {
         }
 
         while current_indentation > 0 {
-            tokens.push(Token::Dedent);
+            tokens.push((Token::Dedent, self.current_index));
             current_indentation = indentation_stack.pop().unwrap();
         }
 
-        tokens
+        Ok(self.verify_output(tokens))
     }
 
     fn consume_number(&mut self) -> Token {
@@ -154,7 +161,7 @@ impl<'a> Lexer<'a> {
         }
 
         match identifier.as_str() {
-            "if" | "else" | "for" | "while" | "def" | "class" => Token::Keyword(identifier),
+            "if" | "else" | "for" | "while" | "def" | "class" | "and" | "or" | "is" | "not" => Token::Keyword(identifier),
             _ => Token::Identifier(identifier),
         }
     }
@@ -215,19 +222,57 @@ impl<'a> Lexer<'a> {
         }
         Token::Operator(operator)
     }
+
+    fn verify_output(&mut self, tokens: Vec<(Token, i32)>) -> Vec<Token> {
+        let mut line_number = 1;
+        let mut new_tokens: Vec<Token> = Vec::new();
+        for ((token_prev, ind_prev), (token_next, ind_next)) in tokens.iter().zip(tokens.iter().skip(1)) {
+            match token_next {
+                Token::Operator(a) => {
+                    if a != ":" && a != ")" && a != "]" {
+                        match *token_prev {
+                            Token::Identifier(_) => {}
+                            _ => {
+                                new_tokens.push(Token::LexicalError(format!("Invalid order {:?}:{:?} {:?}, {:?}", line_number, ind_next, *token_prev, *token_next)));
+                            }
+                        }
+                    }
+                }
+                Token::Newline => {
+                    line_number += 1;
+                }
+                Token::Indent => {
+
+                }
+                _ => {
+                    new_tokens.push(token_prev.clone())
+                }
+            }
+
+        }
+
+        return new_tokens;
+    }
 }
 
 fn main() {
     let input = r#"
         x = -5
+        = 10
         if x < 10:
             print("Hello, world!")
     "#;
 
     let mut lexer = Lexer::new(input);
     let tokens = lexer.tokenize();
-
-    for token in tokens {
-        println!("{:?}", token);
+    match tokens {
+        Ok(tokens) => {
+            for token in tokens {
+                println!("{:?}", token);
+            }
+        }
+        Err(err) => {
+            println!("{}", err);
+        }
     }
 }
