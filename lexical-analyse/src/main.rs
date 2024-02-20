@@ -226,7 +226,7 @@ impl<'a> Lexer<'a> {
     fn verify_output(&mut self, tokens: Vec<(Token, i32)>) -> Vec<Token> {
         let mut line_number = 1;
         let mut new_tokens: Vec<Token> = Vec::new();
-        for (index, (token, column_number)) in tokens.iter().enumerate() {
+        for (index, (token, _)) in tokens.iter().enumerate() {
             // for ((token_prev, _), (token_next, ind_next)) in tokens.iter().zip(tokens.iter().skip(1)) {
             if index == tokens.len() - 1 {
                 break;
@@ -245,9 +245,9 @@ impl<'a> Lexer<'a> {
                         }
                     } else if a == ":" {
                         // let (new_line, indent) = (new_tokens[new_tokens.len() - 1].clone(), new_tokens[new_tokens.len() - 2].clone());
-
-                        if new_line != Token::Newline || indent != Token::Indent {
-                            new_tokens.push(Token::LexicalError(format!("Invalid intent")))
+                        let (new_line, column_number) = tokens[index - 1].clone();
+                        if new_line != Token::Newline || *token != Token::Indent {
+                            new_tokens.push(Token::LexicalError(format!("Invalid intent {:?}:{:?}",line_number, column_number)))
                         }
                     }
                 }
@@ -292,7 +292,7 @@ fn main() {
         x = -5
         = 10
         if x < 10:
-            print("Hello, world!")
+        print("Hello, world!")
     "#;
 
     let mut lexer = Lexer::new(input);
