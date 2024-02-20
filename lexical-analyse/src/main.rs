@@ -12,7 +12,7 @@ enum Token {
     Indent,
     Dedent,
     Newline,
-    LexicalError(String)
+    LexicalError(String),
 }
 
 struct Lexer<'a> {
@@ -70,7 +70,6 @@ impl<'a> Lexer<'a> {
                 }
                 Some(ch) => {
                     if ch.is_ascii_digit() || ch == '-' {
-
                         tokens.push((self.consume_number(), current_index));
                     } else if ch.is_alphabetic() {
                         tokens.push((self.consume_identifier(), current_index));
@@ -235,7 +234,7 @@ impl<'a> Lexer<'a> {
                         match *token_prev {
                             Token::Identifier(_) => {}
                             _ => {
-                                new_tokens.push(Token::LexicalError(format!("Invalid order {:?}:{:?} {:?}, {:?}", line_number, ind_next, *token_prev, *token_next)));
+                                new_tokens.push(Token::LexicalError(format!("Invalid order {:?}:{:?}: {:?} cannot be before {:?}", line_number, ind_next, *token_prev, *token_next)));
                             }
                         }
                     }
@@ -243,15 +242,12 @@ impl<'a> Lexer<'a> {
                 Token::Newline => {
                     line_number += 1;
                 }
-                Token::Indent => {
-
-                }
-                _ => {
-
-                }
+                Token::Indent => {}
+                _ => {}
             }
-            new_tokens.push(token_prev.clone())
-
+            if *token_prev != Token::Indent && *token_prev != Token::Newline && *token_prev != Token::Dedent {
+                new_tokens.push(token_prev.clone())
+            }
         }
 
         return new_tokens;
