@@ -257,7 +257,9 @@ impl<'a> Lexer<'a> {
                 (Token::Indent, _) => {}
                 _ => {}
             }
-            new_tokens.push(token.clone())
+            if *token != Token::Indent && *token != Token::Newline && *token != Token::Dedent {
+                new_tokens.push(token.clone())
+            }
             //     match token_next {
             //         Token::Operator(a) => {
             //             if a != ":" && a != ")" && a != "]" {
