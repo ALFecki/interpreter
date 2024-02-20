@@ -1,5 +1,7 @@
 use std::collections::HashMap;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter, write};
+use std::fs::File;
+use std::io::Read;
 use std::str::Chars;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -15,12 +17,37 @@ enum Token {
     LexicalError(String),
 }
 
+impl Display for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Token::Keyword(name) => write!(f, "TOKEN: default Python keyword \"{name}\""),
+            Token::Identifier(name) => write!(f, "TOKEN: identifier \"{name}\""),
+            Token::Variable((t, name)) => write!(f, "TOKEN: variable \"{name}\" of type {t}"),
+            Token::Operator(name) => write!(f, "TOKEN: operator \"{name}\""),
+            Token::Constant(t) => write!(f, "TOKEN: constant of type {t}"),
+            Token::LexicalError(s) => write!(f, "ERROR: {}", s),
+            _ => { Ok(()) }
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 enum Type {
     Integer(i32),
     Float(f64),
     String(String),
     Char(char),
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::Integer(v) => write!(f, "integer({v})"),
+            Type::Float(v) => write!(f, "float({:?})", v),
+            Type::String(v) => write!(f, "string literal(\"{v}\")"),
+            Type::Char(v) => write!(f, "char({v})")
+        }
+    }
 }
 
 struct Lexer<'a> {
@@ -106,7 +133,7 @@ impl<'a> Lexer<'a> {
             current_indentation = indentation_stack.pop().unwrap();
         }
         let mut verified_tokens = self.verify_output(tokens);
-        self.add_data_types(verified_tokens.clone().len(), &mut verified_tokens, );
+        self.add_data_types(verified_tokens.clone().len(), &mut verified_tokens);
         Ok(verified_tokens)
     }
 
@@ -298,21 +325,17 @@ impl<'a> Lexer<'a> {
 }
 
 fn main() {
-    let input = r#"
-        x = -5
-        k = 10
+    let mut file = File::open("./test.py").expect("Unable to open the file");
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).expect("Unable to read the file");
 
-        e = 1e8
-        if x < 10:
-        print("Hello, world!")
-    "#;
+    let mut lexer = Lexer::new(contents.as_str());
 
-    let mut lexer = Lexer::new(input);
     let tokens = lexer.tokenize();
     match tokens {
         Ok(tokens) => {
             for token in tokens {
-                println!("{:?}", token);
+                println!("{token}");
             }
         }
         Err(err) => {
