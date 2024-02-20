@@ -1,6 +1,6 @@
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::str::Chars;
-use crate::Token::Variable;
 
 #[derive(Debug, PartialEq, Clone)]
 enum Token {
@@ -236,7 +236,6 @@ impl<'a> Lexer<'a> {
         let mut line_number = 1;
         let mut new_tokens: Vec<Token> = Vec::new();
         for (index, (token, _)) in tokens.iter().enumerate() {
-            // for ((token_prev, _), (token_next, ind_next)) in tokens.iter().zip(tokens.iter().skip(1)) {
             if index == tokens.len() - 1 {
                 break;
             }
@@ -253,7 +252,6 @@ impl<'a> Lexer<'a> {
                             }
                         }
                     } else if a == ":" {
-                        // let (new_line, indent) = (new_tokens[new_tokens.len() - 1].clone(), new_tokens[new_tokens.len() - 2].clone());
                         let (new_line, column_number) = tokens[index - 1].clone();
                         if new_line != Token::Newline || *token != Token::Indent {
                             new_tokens.push(Token::LexicalError(format!("Invalid intent {:?}:{:?}", line_number + 1, column_number)))
@@ -275,15 +273,21 @@ impl<'a> Lexer<'a> {
     }
 
     fn add_data_types(&self, size: usize, tokens: &mut [Token]) {
+        let mut variables: HashMap<String, Token> = HashMap::new();
         for i in 0..size {
             match tokens[i].clone() {
                 Token::Identifier(name) => {
                     if i < size - 3 && tokens[i + 1] == Token::Operator("=".to_string()) {
                         match tokens[i + 2].clone() {
                             Token::Constant(t) => {
-                                tokens[i] = Token::Variable((t, name))
+                                tokens[i] = Token::Variable((t, name.clone()));
+                                variables.insert(name, tokens[i].clone());
                             }
                             _ => {}
+                        }
+                    } else {
+                        if variables.contains_key(&name) {
+                            tokens[i] = variables.get(&name).unwrap().clone()
                         }
                     }
                 }
@@ -298,7 +302,7 @@ fn main() {
         x = -5
         k = 10
 
-        e = 1e10
+        e = 1e8
         if x < 10:
         print("Hello, world!")
     "#;
