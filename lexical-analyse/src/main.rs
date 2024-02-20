@@ -49,6 +49,7 @@ impl<'a> Lexer<'a> {
                     self.advance();
                 }
                 Some('\n') => {
+                    self.current_index = 0;
                     self.advance();
                     tokens.push((Token::Newline, self.current_index));
                     let mut spaces_count = 0;
@@ -226,7 +227,8 @@ impl<'a> Lexer<'a> {
     fn verify_output(&mut self, tokens: Vec<(Token, i32)>) -> Vec<Token> {
         let mut line_number = 1;
         let mut new_tokens: Vec<Token> = Vec::new();
-        for ((token_prev, ind_prev), (token_next, ind_next)) in tokens.iter().zip(tokens.iter().skip(1)) {
+        // for (index, token) in tokens.iter().enumerate() {
+        for ((token_prev, _), (token_next, ind_next)) in tokens.iter().zip(tokens.iter().skip(1)) {
             match token_next {
                 Token::Operator(a) => {
                     if a != ":" && a != ")" && a != "]" {
@@ -245,9 +247,10 @@ impl<'a> Lexer<'a> {
 
                 }
                 _ => {
-                    new_tokens.push(token_prev.clone())
+
                 }
             }
+            new_tokens.push(token_prev.clone())
 
         }
 
