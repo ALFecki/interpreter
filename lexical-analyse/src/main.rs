@@ -247,7 +247,7 @@ impl<'a> Lexer<'a> {
                         // let (new_line, indent) = (new_tokens[new_tokens.len() - 1].clone(), new_tokens[new_tokens.len() - 2].clone());
                         let (new_line, column_number) = tokens[index - 1].clone();
                         if new_line != Token::Newline || *token != Token::Indent {
-                            new_tokens.push(Token::LexicalError(format!("Invalid intent {:?}:{:?}",line_number, column_number)))
+                            new_tokens.push(Token::LexicalError(format!("Invalid intent {:?}:{:?}",line_number + 1, column_number)))
                         }
                     }
                 }
@@ -260,29 +260,6 @@ impl<'a> Lexer<'a> {
             if *token != Token::Indent && *token != Token::Newline && *token != Token::Dedent {
                 new_tokens.push(token.clone())
             }
-            //     match token_next {
-            //         Token::Operator(a) => {
-            //             if a != ":" && a != ")" && a != "]" {
-            //                 match *token_prev {
-            //                     Token::Identifier(_) => {}
-            //                     _ => {
-            //                         new_tokens.push(Token::LexicalError(format!("Invalid order {:?}:{:?}: {:?} cannot be before {:?}", line_number, ind_next, *token_prev, *token_next)));
-            //                     }
-            //                 }
-            //             } else if a == ":" {
-            //                 let (new_line   , indent) = (new_tokens[new_tokens.len() - 1].clone(), new_tokens[new_tokens.len() - 2].clone());
-            //                 if new_line != Token::Newline || indent != Token::Indent {
-            //                     new_tokens.push(Token::LexicalError(format!("Invalid intent")))
-            //                 }
-            //             }
-            //         }
-            //         Token::Newline => {
-            //             line_number += 1;
-            //         }
-            //         Token::Indent => {}
-            //         _ => {}
-            //     }
-            //     new_tokens.push(token_prev.clone())
         }
 
         return new_tokens;
@@ -292,7 +269,7 @@ impl<'a> Lexer<'a> {
 fn main() {
     let input = r#"
         x = -5
-        = 10
+        k = 10
         if x < 10:
         print("Hello, world!")
     "#;
