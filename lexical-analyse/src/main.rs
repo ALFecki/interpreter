@@ -226,28 +226,61 @@ impl<'a> Lexer<'a> {
     fn verify_output(&mut self, tokens: Vec<(Token, i32)>) -> Vec<Token> {
         let mut line_number = 1;
         let mut new_tokens: Vec<Token> = Vec::new();
-        // for (index, token) in tokens.iter().enumerate() {
-        for ((token_prev, _), (token_next, ind_next)) in tokens.iter().zip(tokens.iter().skip(1)) {
-            match token_next {
-                Token::Operator(a) => {
+        for (index, (token, column_number)) in tokens.iter().enumerate() {
+            // for ((token_prev, _), (token_next, ind_next)) in tokens.iter().zip(tokens.iter().skip(1)) {
+            if index == tokens.len() - 1 {
+                break;
+            }
+            if index == 0 {
+                continue;
+            }
+            match tokens[index + 1].clone() {
+                (Token::Operator(a), column_num) => {
                     if a != ":" && a != ")" && a != "]" {
-                        match *token_prev {
+                        match token {
                             Token::Identifier(_) => {}
                             _ => {
-                                new_tokens.push(Token::LexicalError(format!("Invalid order {:?}:{:?}: {:?} cannot be before {:?}", line_number, ind_next, *token_prev, *token_next)));
+                                new_tokens.push(Token::LexicalError(format!("Invalid order {:?}:{:?}: {:?} cannot be before {:?}", line_number, column_num, *token, tokens[index + 1].0)));
                             }
+                        }
+                    } else if a == ":" {
+                        // let (new_line, indent) = (new_tokens[new_tokens.len() - 1].clone(), new_tokens[new_tokens.len() - 2].clone());
+
+                        if new_line != Token::Newline || indent != Token::Indent {
+                            new_tokens.push(Token::LexicalError(format!("Invalid intent")))
                         }
                     }
                 }
-                Token::Newline => {
+                (Token::Newline, _) => {
                     line_number += 1;
                 }
-                Token::Indent => {}
+                (Token::Indent, _) => {}
                 _ => {}
             }
-            if *token_prev != Token::Indent && *token_prev != Token::Newline && *token_prev != Token::Dedent {
-                new_tokens.push(token_prev.clone())
-            }
+            new_tokens.push(token.clone())
+            //     match token_next {
+            //         Token::Operator(a) => {
+            //             if a != ":" && a != ")" && a != "]" {
+            //                 match *token_prev {
+            //                     Token::Identifier(_) => {}
+            //                     _ => {
+            //                         new_tokens.push(Token::LexicalError(format!("Invalid order {:?}:{:?}: {:?} cannot be before {:?}", line_number, ind_next, *token_prev, *token_next)));
+            //                     }
+            //                 }
+            //             } else if a == ":" {
+            //                 let (new_line   , indent) = (new_tokens[new_tokens.len() - 1].clone(), new_tokens[new_tokens.len() - 2].clone());
+            //                 if new_line != Token::Newline || indent != Token::Indent {
+            //                     new_tokens.push(Token::LexicalError(format!("Invalid intent")))
+            //                 }
+            //             }
+            //         }
+            //         Token::Newline => {
+            //             line_number += 1;
+            //         }
+            //         Token::Indent => {}
+            //         _ => {}
+            //     }
+            //     new_tokens.push(token_prev.clone())
         }
 
         return new_tokens;
