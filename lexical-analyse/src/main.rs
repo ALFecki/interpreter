@@ -126,7 +126,7 @@ impl<'a> Lexer<'a> {
             if ch.is_ascii_digit() {
                 num_str.push(ch);
                 self.advance();
-            } else if ch == '.' && !is_float {
+            } else if ch == '.' || ch == 'e' && !is_float {
                 num_str.push(ch);
                 self.advance();
                 is_float = true;
