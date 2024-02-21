@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter, write};
 use std::fs::File;
 use std::io::Read;
+use std::ops::AddAssign;
 use std::str::Chars;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -93,8 +94,6 @@ impl<'a> Lexer<'a> {
                         spaces_count += 1;
                     }
                     if spaces_count > current_indentation {
-                        println!("{:?}", spaces_count);
-                        println!("{:?}", current_indentation);
                         for _ in (current_indentation..spaces_count).step_by(4) {
                             tokens.push((Token::Indent, self.current_index));
                         }
@@ -136,7 +135,7 @@ impl<'a> Lexer<'a> {
             tokens.push((Token::Dedent, self.current_index));
             current_indentation = indentation_stack.pop().unwrap();
         }
-        let mut verified_tokens = self.verify_output(tokens);
+        let mut verified_tokens = self.verify_output(&mut tokens);
         self.add_data_types(verified_tokens.clone().len(), &mut verified_tokens);
         Ok(verified_tokens)
     }
@@ -201,7 +200,7 @@ impl<'a> Lexer<'a> {
         }
 
         match identifier.as_str() {
-            "if" | "else" | "for" | "while" | "def" | "class" | "and" | "or" | "is" | "not" => Token::Keyword(identifier),
+            "if" | "else" | "for" | "while" | "def" | "class" | "and" | "or" | "is" | "not" | "try" | "except" | "finally" | "pass" => Token::Keyword(identifier),
             _ => Token::Identifier(identifier),
         }
     }
@@ -263,9 +262,19 @@ impl<'a> Lexer<'a> {
         Token::Operator(operator)
     }
 
-    fn verify_output(&mut self, tokens: Vec<(Token, i32)>) -> Vec<Token> {
+    fn verify_output(&mut self, tokens: &mut Vec<(Token, i32)>) -> Vec<Token> {
         let mut line_number = 1;
         let mut new_tokens: Vec<Token> = Vec::new();
+        let tokens_clone = tokens.clone();
+        let try_except_diff = tokens_clone.iter().filter(|&v| v.0 == Token::Keyword("try".to_string())).count() - tokens.iter().filter(|&v| v.0 == Token::Keyword("except".to_string())).count();
+        if try_except_diff > 0 {
+            let error_tryies = tokens_clone.iter().filter(|&v| v.0 == Token::Keyword("try".to_string())).take(try_except_diff);
+            for error in error_tryies {
+                let position = tokens.clone().iter().position(|el| el == &error.clone());
+                tokens.insert(position.unwrap(), (Token::LexicalError(format!("All \"try\" need \"except\" {:?}:{:?}", tokens[0..position.unwrap()].iter().filter(|&v| v.0 == Token::Newline).count() + 1, error.1)), error.1));
+            }
+        }
+
         for (index, (token, _)) in tokens.iter().enumerate() {
             if index == tokens.len() - 1 {
                 break;
@@ -296,12 +305,6 @@ impl<'a> Lexer<'a> {
                             }
                         }
                     }
-                    // else if a == ":" {
-                    //     let (new_line, column_number) = tokens[index - 1].clone();
-                    //     if new_line != Token::Newline || *token != Token::Indent {
-                    //         new_tokens.push(Token::LexicalError(format!("Invalid intent {:?}:{:?}", line_number + 1, column_number)))
-                    //     }
-                    // }
                 }
                 (Token::Newline, _) => {
                     line_number += 1;
@@ -335,6 +338,9 @@ impl<'a> Lexer<'a> {
                             tokens[i] = variables.get(&name).unwrap().clone()
                         }
                     }
+                }
+                Token::Variable((t, str)) => {
+                    if i < size - 3 && tokens[i + 1] == Token::Operator("=".to_string()) {}
                 }
                 _ => {}
             }
