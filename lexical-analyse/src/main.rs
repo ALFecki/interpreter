@@ -200,7 +200,7 @@ impl<'a> Lexer<'a> {
         }
 
         match identifier.as_str() {
-            "if" | "else" | "for" | "while" | "def" | "class" | "and" | "or" | "is" | "not" | "try" | "except" | "finally" | "pass" => Token::Keyword(identifier),
+            "if" | "else" | "elif" | "for" | "while" | "def" | "class" | "and" | "or" | "is" | "not" | "try" | "except" | "finally" | "pass" => Token::Keyword(identifier),
             _ => Token::Identifier(identifier),
         }
     }
@@ -250,6 +250,9 @@ impl<'a> Lexer<'a> {
         let mut operator = String::new();
         while let Some(ch) = self.current_char {
             if ch.is_ascii_whitespace() || ch.is_alphanumeric() || ch == '"' {
+                break;
+            }
+            if !operator.is_empty() && (ch == ')' || ch == ']' || ch == '}') {
                 break;
             }
             operator.push(ch);
