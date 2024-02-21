@@ -93,9 +93,11 @@ impl<'a> Lexer<'a> {
                         spaces_count += 1;
                     }
                     if spaces_count > current_indentation {
-                        println!("@@@@@@@@@@@@@@@@@@@@");
                         println!("{:?}", spaces_count);
-                        tokens.push((Token::Indent, self.current_index));
+                        println!("{:?}", current_indentation);
+                        for _ in (current_indentation..spaces_count).step_by(4) {
+                            tokens.push((Token::Indent, self.current_index));
+                        }
                         indentation_stack.push(current_indentation);
                         current_indentation = spaces_count;
                     } else {
