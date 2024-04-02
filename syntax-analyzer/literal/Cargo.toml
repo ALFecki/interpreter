@@ -1,12 +1,7 @@
 [package]
 name = "rustpython-literal"
 description = "Common literal handling utilities mostly useful for unparse and repr."
-edition = { workspace = true }
 version = { workspace = true }
-authors = { workspace = true }
-repository = { workspace = true }
-license = { workspace = true }
-rust-version = { workspace = true }
 
 [dependencies]
 hexf-parse = "0.2.1"

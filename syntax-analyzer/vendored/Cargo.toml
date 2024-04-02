@@ -1,11 +1,9 @@
 [package]
 name = "rustpython-parser-vendored"
 description = "RustPython parser vendored third-party crates."
-authors = ["RustPython Team", "and the original authors of the vendored modules"]
-license = "MIT"
 edition = { workspace = true }
 version = { workspace = true }
-repository = { workspace = true }
+#repository = { workspace = true }
 rust-version = { workspace = true }
 
 [dependencies]

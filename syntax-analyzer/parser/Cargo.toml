@@ -3,10 +3,7 @@ name = "rustpython-parser"
 description = "Python language parser for Python3."
 edition = { workspace = true }
 version = { workspace = true }
-authors = { workspace = true }
-repository = { workspace = true }
-license = { workspace = true }
-rust-version = { workspace = true }
+
 
 [features]
 default = ["location", "malachite-bigint"]
