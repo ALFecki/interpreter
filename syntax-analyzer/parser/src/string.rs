@@ -1,8 +1,3 @@
-// Contains the logic for parsing string literals (mostly concerned with f-strings.)
-//
-// The lexer doesn't do any special handling of f-strings, it just treats them as
-// regular strings. Since the parser has no definition of f-string formats (Pending PEP 701)
-// we have to do the parsing here, manually.
 use crate::text_size::TextRange;
 use crate::{
     ast::{self, Constant, Expr},
@@ -16,7 +11,7 @@ use rustpython_parser_core::{
     ConversionFlag,
 };
 
-// unicode_name2 does not expose `MAX_NAME_LENGTH`, so we replicate that constant here, fix #3798
+
 const MAX_UNICODE_NAME: usize = 88;
 
 struct StringParser<'a> {

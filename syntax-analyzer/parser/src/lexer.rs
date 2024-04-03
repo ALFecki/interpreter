@@ -1,32 +1,3 @@
-//! This module takes care of lexing Python source text.
-//!
-//! This means source code is scanned and translated into separate tokens. The rules
-//! governing what is and is not a valid token are defined in the Python reference
-//! guide section on [Lexical analysis].
-//!
-//! The primary function in this module is [`lex`], which takes a string slice
-//! and returns an iterator over the tokens in the source code. The tokens are currently returned
-//! as a `Result<Spanned, LexicalError>`, where [`Spanned`] is a tuple containing the
-//! start and end [`TextSize`] and a [`Tok`] denoting the token.
-//!
-//! # Example
-//!
-//! ```
-//! use rustpython_parser::{lexer::lex, Tok, Mode, StringKind};
-//!
-//! let source = "x = 'RustPython'";
-//! let tokens = lex(source, Mode::Module)
-//!     .map(|tok| tok.expect("Failed to lex"))
-//!     .collect::<Vec<_>>();
-//!
-//! for (token, range) in tokens {
-//!     println!(
-//!         "{token:?}@{range:?}",
-//!     );
-//! }
-//! ```
-//!
-//! [Lexical analysis]: https://docs.python.org/3/reference/lexical_analysis.html
 use crate::{
     ast::bigint::BigInt,
     soft_keywords::SoftKeywordTransformer,

@@ -1,17 +1,3 @@
-//! Contains the interface to the Python parser.
-//!
-//! Functions in this module can be used to parse Python code into an [Abstract Syntax Tree]
-//! (AST) that is then transformed into bytecode.
-//!
-//! There are three ways to parse Python code corresponding to the different [`Mode`]s
-//! defined in the [`mode`] module.
-//!
-//! All functions return a [`Result`](std::result::Result) containing the parsed AST or
-//! a [`ParseError`] if parsing failed.
-//!
-//! [Abstract Syntax Tree]: https://en.wikipedia.org/wiki/Abstract_syntax_tree
-//! [`Mode`]: crate::mode
-
 use crate::{
     ast::{self, OptionalRange, Ranged},
     lexer::{self, LexResult, LexicalError, LexicalErrorType},
@@ -26,32 +12,7 @@ use std::iter;
 use crate::{lexer::Lexer, soft_keywords::SoftKeywordTransformer, text_size::TextRange};
 pub(super) use lalrpop_util::ParseError as LalrpopError;
 
-/// Parse Python code string to implementor's type.
-///
-/// # Example
-///
-/// For example, parsing a simple function definition and a call to that function:
-///
-/// ```
-/// use rustpython_parser::{self as parser, ast, Parse};
-/// let source = r#"
-/// def foo():
-///    return 42
-///
-/// print(foo())
-/// "#;
-/// let program = ast::Suite::parse(source, "<embedded>");
-/// assert!(program.is_ok());
-/// ```
-///
-/// Parsing a single expression denoting the addition of two numbers, but this time specifying a different,
-/// somewhat silly, location:
-///
-/// ```
-/// use rustpython_parser::{self as parser, ast, Parse, text_size::TextSize};
-///
-/// let expr = ast::Expr::parse_starts_at("1 + 2", "<embedded>", TextSize::from(400));
-/// assert!(expr.is_ok());
+
 pub trait Parse
 where
     Self: Sized,
