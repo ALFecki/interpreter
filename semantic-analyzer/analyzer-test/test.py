@@ -3,6 +3,7 @@
 def a(): return 1
 def a(): return "a" # OK
 
+
 print(a())
 
 def g(): return f()
