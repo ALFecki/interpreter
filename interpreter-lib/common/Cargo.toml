@@ -1,0 +1,45 @@
+[package]
+name = "rustpython-common"
+version = "0.3.1"
+description = "General python functions and algorithms for use in RustPython"
+authors = ["RustPython Team"]
+edition = "2021"
+repository = "https://github.com/RustPython/RustPython"
+license = "MIT"
+
+[features]
+threading = ["parking_lot"]
+
+[dependencies]
+rustpython-format = { workspace = true }
+
+ascii = { workspace = true }
+bitflags = { workspace = true }
+bstr = { workspace = true }
+cfg-if = { workspace = true }
+itertools = { workspace = true }
+libc = { workspace = true }
+malachite-bigint = { workspace = true }
+malachite-q = { workspace = true }
+malachite-base = { workspace = true }
+num-complex = { workspace = true }
+num-traits = { workspace = true }
+once_cell = { workspace = true }
+parking_lot = { workspace = true, optional = true }
+rand = { workspace = true }
+
+lock_api = "0.4"
+radium = "0.7"
+siphasher = "0.3"
+volatile = "0.3"
+
+[target.'cfg(windows)'.dependencies]
+widestring = { workspace = true }
+windows-sys = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Networking_WinSock",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Ioctl",
+    "Win32_System_LibraryLoader",
+    "Win32_System_SystemServices",
+] }

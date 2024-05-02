@@ -1,0 +1,16 @@
+[package]
+name = "rustpython-derive"
+version = "0.3.1"
+description = "Rust language extensions and macros specific to rustpython."
+authors = ["RustPython Team"]
+repository = "https://github.com/RustPython/RustPython"
+license = "MIT"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+rustpython-compiler = { workspace = true }
+rustpython-derive-impl = { workspace = true }
+syn = { workspace = true }
