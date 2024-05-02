@@ -3,6 +3,22 @@
 def a(): return 1
 def a(): return "a" # OK
 
+test = {1: "2", 2: "3", 3: "5"}
+
+
+test["2"]
+
+1 # Warn
+
+def f(): return "a"
+f() # Warn
+
+def f(): return None
+f() # OK
+
+
+test1: int = "2"
+
 print(a())
 
 def g(): return f()
